@@ -367,7 +367,8 @@
       checkedCurrent = true;
       answerInput.disabled = true;
       checkBtn.textContent = "Next";
-      checkBtn.focus();
+      // Delay focus so the same Enter key press cannot instantly trigger Next.
+      window.setTimeout(() => checkBtn.focus(), 0);
     }
 
     function nextQuestion() {
@@ -406,6 +407,7 @@
     restartBtn.addEventListener("click", () => setVisible(setupSection));
     answerInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
+        e.preventDefault();
         if (!checkedCurrent) checkAnswer();
         else nextQuestion();
       }
