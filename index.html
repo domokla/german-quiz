@@ -6,19 +6,19 @@
   <title>German Quiz</title>
   <style>
     :root {
-      --bg: #efede8;
-      --card: #fbfaf7;
-      --text: #1c1c1c;
-      --muted: #5f5a52;
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #131416;
+      --muted: #61656b;
       --ok: #166534;
       --ok-bg: #dcfce7;
       --bad: #991b1b;
       --bad-bg: #fee2e2;
-      --accent: #9f1d20;
-      --accent-dark: #7f1719;
-      --border: #d9d2c6;
-      --de-gold: #d4a93a;
-      --de-black: #171717;
+      --accent: #c2353a;
+      --accent-dark: #a92a2f;
+      --border: #dee2e6;
+      --de-gold: #d0b16b;
+      --de-black: #111317;
     }
 
     * { box-sizing: border-box; }
@@ -26,7 +26,9 @@
       margin: 0;
       font-family: "Source Sans 3", "Avenir Next", "Segoe UI", sans-serif;
       color: var(--text);
-      background: linear-gradient(180deg, #f4f1eb 0%, #ebe6dc 100%);
+      background:
+        radial-gradient(circle at 85% 10%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 42%),
+        linear-gradient(180deg, #eef1f4 0%, #e8ecf0 100%);
       min-height: 100vh;
       display: grid;
       place-items: center;
@@ -39,7 +41,7 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.07);
+      box-shadow: 0 10px 24px rgba(8, 15, 26, 0.07);
       position: relative;
       overflow: hidden;
     }
@@ -62,10 +64,31 @@
       );
     }
 
+    .app::after {
+      content: "";
+      position: absolute;
+      right: -70px;
+      top: -70px;
+      width: 220px;
+      height: 220px;
+      background: linear-gradient(
+        135deg,
+        rgba(17, 19, 23, 0.06) 0%,
+        rgba(17, 19, 23, 0.06) 32%,
+        rgba(194, 53, 58, 0.05) 32%,
+        rgba(194, 53, 58, 0.05) 64%,
+        rgba(208, 177, 107, 0.05) 64%,
+        rgba(208, 177, 107, 0.05) 100%
+      );
+      transform: rotate(16deg);
+      pointer-events: none;
+    }
+
     h1 {
       margin: 6px 0 16px;
       font-size: 1.7rem;
       letter-spacing: 0.2px;
+      font-weight: 700;
     }
 
     .setup, .quiz, .result {
@@ -100,10 +123,10 @@
     }
     button:hover { background: var(--accent-dark); }
     button.secondary {
-      background: #e8e2d7;
-      color: #2b2926;
+      background: #eef1f5;
+      color: #272a2f;
     }
-    button.secondary:hover { background: #d8d0c3; }
+    button.secondary:hover { background: #dfe4ea; }
 
     .row {
       display: flex;
@@ -121,7 +144,7 @@
       border: 1px dashed var(--border);
       border-radius: 12px;
       padding: 14px;
-      background: #fffefa;
+      background: #fcfdff;
     }
     .word-label {
       color: var(--muted);
