@@ -196,6 +196,7 @@
 
     const QUIZ_SIZE = 10;
     let quizWords = [];
+    let quizDirections = [];
     let currentIndex = 0;
     let score = 0;
     let checkedCurrent = false;
@@ -266,6 +267,10 @@
       setupMsg.textContent = "";
     }
 
+    function randomDirection() {
+      return Math.random() < 0.5 ? "HU_TO_DE" : "DE_TO_HU";
+    }
+
     async function loadCsvText() {
       const candidates = [
         "words.csv",
@@ -309,6 +314,7 @@
       }
 
       quizWords = shuffle(allWords).slice(0, QUIZ_SIZE);
+      quizDirections = Array.from({ length: QUIZ_SIZE }, randomDirection);
       currentIndex = 0;
       score = 0;
       checkedCurrent = false;
@@ -318,8 +324,12 @@
 
     function renderQuestion() {
       const item = quizWords[currentIndex];
+      const direction = quizDirections[currentIndex];
+      const isHuToDe = direction === "HU_TO_DE";
       progressEl.textContent = `Question ${currentIndex + 1} / ${QUIZ_SIZE}`;
-      hungarianWordEl.textContent = item.magyar;
+      document.querySelector(".word-label").textContent = isHuToDe ? "Hungarian" : "German";
+      hungarianWordEl.textContent = isHuToDe ? item.magyar : item.nemet;
+      answerInput.placeholder = isHuToDe ? "Type German translation" : "Type Hungarian translation";
       answerInput.value = "";
       answerInput.disabled = false;
       answerInput.focus();
@@ -332,8 +342,10 @@
     function checkAnswer() {
       if (checkedCurrent) return;
       const item = quizWords[currentIndex];
+      const direction = quizDirections[currentIndex];
+      const expected = direction === "HU_TO_DE" ? item.nemet : item.magyar;
       const user = normalize(answerInput.value);
-      const correct = normalize(item.nemet);
+      const correct = normalize(expected);
 
       if (user && user === correct) {
         score++;
@@ -341,7 +353,7 @@
         quizFeedback.textContent = "Correct!";
       } else {
         quizFeedback.className = "feedback bad";
-        quizFeedback.textContent = `Wrong. Correct answer: ${item.nemet}`;
+        quizFeedback.textContent = `Wrong. Correct answer: ${expected}`;
       }
 
       checkedCurrent = true;
