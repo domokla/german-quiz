@@ -162,7 +162,6 @@
       <div class="row">
         <button id="checkBtn">Check</button>
         <button id="pronounceBtn" class="secondary" type="button">Pronounce</button>
-        <button id="nextBtn" class="secondary" type="button" disabled>Next</button>
       </div>
       <div id="quizFeedback" class="feedback"></div>
     </section>
@@ -189,7 +188,6 @@
 
     const startBtn = document.getElementById("startBtn");
     const checkBtn = document.getElementById("checkBtn");
-    const nextBtn = document.getElementById("nextBtn");
     const pronounceBtn = document.getElementById("pronounceBtn");
     const restartBtn = document.getElementById("restartBtn");
     const scoreLine = document.getElementById("scoreLine");
@@ -267,8 +265,18 @@
       setupMsg.textContent = "";
     }
 
-    function randomDirection() {
-      return Math.random() < 0.5 ? "HU_TO_DE" : "DE_TO_HU";
+    function buildQuizDirections(size) {
+      const directions = [];
+      const half = Math.floor(size / 2);
+
+      for (let i = 0; i < half; i++) directions.push("HU_TO_DE");
+      for (let i = half; i < size; i++) directions.push("DE_TO_HU");
+
+      if (size % 2 === 1 && Math.random() < 0.5) {
+        directions[directions.length - 1] = "HU_TO_DE";
+      }
+
+      return shuffle(directions);
     }
 
     async function loadCsvText() {
@@ -314,7 +322,7 @@
       }
 
       quizWords = shuffle(allWords).slice(0, QUIZ_SIZE);
-      quizDirections = Array.from({ length: QUIZ_SIZE }, randomDirection);
+      quizDirections = buildQuizDirections(QUIZ_SIZE);
       currentIndex = 0;
       score = 0;
       checkedCurrent = false;
@@ -336,7 +344,7 @@
       checkedCurrent = false;
       quizFeedback.className = "feedback";
       quizFeedback.textContent = "";
-      nextBtn.disabled = true;
+      checkBtn.textContent = "Check";
     }
 
     function checkAnswer() {
@@ -358,7 +366,8 @@
 
       checkedCurrent = true;
       answerInput.disabled = true;
-      nextBtn.disabled = false;
+      checkBtn.textContent = "Next";
+      checkBtn.focus();
     }
 
     function nextQuestion() {
@@ -389,8 +398,10 @@
     }
 
     startBtn.addEventListener("click", startQuiz);
-    checkBtn.addEventListener("click", checkAnswer);
-    nextBtn.addEventListener("click", nextQuestion);
+    checkBtn.addEventListener("click", () => {
+      if (!checkedCurrent) checkAnswer();
+      else nextQuestion();
+    });
     pronounceBtn.addEventListener("click", pronounceCurrent);
     restartBtn.addEventListener("click", () => setVisible(setupSection));
     answerInput.addEventListener("keydown", (e) => {
