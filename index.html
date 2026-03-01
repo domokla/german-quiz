@@ -148,7 +148,16 @@
         <div id="hungarianWord" class="word"></div>
       </div>
       <div class="row">
-        <input id="answerInput" type="text" placeholder="Type German translation">
+        <input
+          id="answerInput"
+          type="text"
+          name="quiz-answer"
+          placeholder="Type German translation"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+        >
       </div>
       <div class="row">
         <button id="checkBtn">Check</button>
@@ -190,6 +199,7 @@
     let currentIndex = 0;
     let score = 0;
     let checkedCurrent = false;
+    let germanVoice = null;
 
     function setVisible(section) {
       setupSection.classList.remove("active");
@@ -200,6 +210,16 @@
 
     function normalize(value) {
       return value.trim().toLocaleLowerCase("de-DE");
+    }
+
+    function selectGermanVoice() {
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices || voices.length === 0) return;
+
+      germanVoice =
+        voices.find((v) => v.lang === "de-DE") ||
+        voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("de")) ||
+        null;
     }
 
     function parseCsv(text) {
@@ -345,9 +365,15 @@
       if (!item) return;
       const utter = new SpeechSynthesisUtterance(item.nemet);
       utter.lang = "de-DE";
+      if (germanVoice) utter.voice = germanVoice;
       utter.rate = 0.95;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utter);
+    }
+
+    selectGermanVoice();
+    if ("onvoiceschanged" in window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = selectGermanVoice;
     }
 
     startBtn.addEventListener("click", startQuiz);
