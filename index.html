@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>German Quiz</title>
+  <style>
+    :root {
+      --bg: #f7f4ed;
+      --card: #fffdf8;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --ok: #166534;
+      --ok-bg: #dcfce7;
+      --bad: #991b1b;
+      --bad-bg: #fee2e2;
+      --accent: #0f766e;
+      --accent-dark: #115e59;
+      --border: #d1d5db;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #faf7f0 0%, #f2ede3 100%);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: min(720px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: 1.7rem;
+      letter-spacing: 0.2px;
+    }
+
+    .setup, .quiz, .result {
+      display: none;
+      gap: 12px;
+    }
+    .setup.active, .quiz.active, .result.active { display: grid; }
+
+    label {
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    input[type="url"], input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      background: #fff;
+      color: var(--text);
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-dark); }
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    button.secondary:hover { background: #d1d5db; }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .row > * { flex: 1 1 180px; }
+
+    .info {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .word-card {
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fff;
+    }
+    .word-label {
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+    .word {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .feedback {
+      padding: 10px 12px;
+      border-radius: 10px;
+      display: none;
+      font-weight: 600;
+    }
+    .feedback.ok {
+      display: block;
+      background: var(--ok-bg);
+      color: var(--ok);
+    }
+    .feedback.bad {
+      display: block;
+      background: var(--bad-bg);
+      color: var(--bad);
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>German Quiz</h1>
+
+    <section id="setup" class="setup active">
+      <div class="row">
+        <button id="startBtn">Start Quiz</button>
+      </div>
+      <div class="info">CSV source: <code>words.csv</code> from this folder. Format: <code>magyar,német</code>.</div>
+      <div id="setupMsg" class="feedback"></div>
+    </section>
+
+    <section id="quiz" class="quiz">
+      <div class="info" id="progress"></div>
+      <div class="word-card">
+        <div class="word-label">Hungarian</div>
+        <div id="hungarianWord" class="word"></div>
+      </div>
+      <div class="row">
+        <input id="answerInput" type="text" placeholder="Type German translation">
+      </div>
+      <div class="row">
+        <button id="checkBtn">Check</button>
+        <button id="pronounceBtn" class="secondary" type="button">Pronounce</button>
+        <button id="nextBtn" class="secondary" type="button" disabled>Next</button>
+      </div>
+      <div id="quizFeedback" class="feedback"></div>
+    </section>
+
+    <section id="result" class="result">
+      <h2>Quiz Finished</h2>
+      <div id="scoreLine" class="word"></div>
+      <div class="row">
+        <button id="restartBtn">Play Again</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const setupSection = document.getElementById("setup");
+    const quizSection = document.getElementById("quiz");
+    const resultSection = document.getElementById("result");
+    const setupMsg = document.getElementById("setupMsg");
+
+    const progressEl = document.getElementById("progress");
+    const hungarianWordEl = document.getElementById("hungarianWord");
+    const answerInput = document.getElementById("answerInput");
+    const quizFeedback = document.getElementById("quizFeedback");
+
+    const startBtn = document.getElementById("startBtn");
+    const checkBtn = document.getElementById("checkBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const pronounceBtn = document.getElementById("pronounceBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const scoreLine = document.getElementById("scoreLine");
+
+    const QUIZ_SIZE = 10;
+    let quizWords = [];
+    let currentIndex = 0;
+    let score = 0;
+    let checkedCurrent = false;
+
+    function setVisible(section) {
+      setupSection.classList.remove("active");
+      quizSection.classList.remove("active");
+      resultSection.classList.remove("active");
+      section.classList.add("active");
+    }
+
+    function normalize(value) {
+      return value.trim().toLocaleLowerCase("de-DE");
+    }
+
+    function parseCsv(text) {
+      const rows = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => line.split(","))
+        .filter((cols) => cols.length >= 2)
+        .map((cols) => ({
+          magyar: cols[0].trim(),
+          nemet: cols.slice(1).join(",").trim()
+        }))
+        .filter((item) => item.magyar && item.nemet);
+
+      // Skip optional CSV header: magyar,német
+      if (
+        rows.length > 0 &&
+        normalize(rows[0].magyar) === "magyar" &&
+        normalize(rows[0].nemet) === "német"
+      ) {
+        return rows.slice(1);
+      }
+
+      return rows;
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function showSetupError(msg) {
+      setupMsg.className = "feedback bad";
+      setupMsg.textContent = msg;
+    }
+
+    function clearSetupError() {
+      setupMsg.className = "feedback";
+      setupMsg.textContent = "";
+    }
+
+    async function loadCsvText() {
+      const candidates = [
+        "words.csv",
+        "./words.csv",
+        new URL("words.csv", window.location.href).toString()
+      ];
+
+      for (const path of candidates) {
+        try {
+          const response = await fetch(path, { cache: "no-store" });
+          if (response.ok) return await response.text();
+        } catch (_) {
+          // Try next candidate.
+        }
+      }
+
+      if (window.location.protocol === "file:") {
+        throw new Error("LOCAL_FILE_BLOCKED");
+      }
+      throw new Error("CSV_NOT_FOUND");
+    }
+
+    async function startQuiz() {
+      clearSetupError();
+      let text;
+      try {
+        text = await loadCsvText();
+      } catch (err) {
+        if (err && err.message === "LOCAL_FILE_BLOCKED") {
+          showSetupError("Browser blocked file access. Run from GitHub Pages or local server (not file://).");
+        } else {
+          showSetupError("Could not load words.csv. Make sure it is next to index.html on the server.");
+        }
+        return;
+      }
+
+      const allWords = parseCsv(text);
+      if (allWords.length < QUIZ_SIZE) {
+        showSetupError(`Need at least ${QUIZ_SIZE} valid lines in CSV.`);
+        return;
+      }
+
+      quizWords = shuffle(allWords).slice(0, QUIZ_SIZE);
+      currentIndex = 0;
+      score = 0;
+      checkedCurrent = false;
+      renderQuestion();
+      setVisible(quizSection);
+    }
+
+    function renderQuestion() {
+      const item = quizWords[currentIndex];
+      progressEl.textContent = `Question ${currentIndex + 1} / ${QUIZ_SIZE}`;
+      hungarianWordEl.textContent = item.magyar;
+      answerInput.value = "";
+      answerInput.disabled = false;
+      answerInput.focus();
+      checkedCurrent = false;
+      quizFeedback.className = "feedback";
+      quizFeedback.textContent = "";
+      nextBtn.disabled = true;
+    }
+
+    function checkAnswer() {
+      if (checkedCurrent) return;
+      const item = quizWords[currentIndex];
+      const user = normalize(answerInput.value);
+      const correct = normalize(item.nemet);
+
+      if (user && user === correct) {
+        score++;
+        quizFeedback.className = "feedback ok";
+        quizFeedback.textContent = "Correct!";
+      } else {
+        quizFeedback.className = "feedback bad";
+        quizFeedback.textContent = `Wrong. Correct answer: ${item.nemet}`;
+      }
+
+      checkedCurrent = true;
+      answerInput.disabled = true;
+      nextBtn.disabled = false;
+    }
+
+    function nextQuestion() {
+      if (!checkedCurrent) return;
+      currentIndex++;
+      if (currentIndex >= QUIZ_SIZE) {
+        scoreLine.textContent = `Your score: ${score} / ${QUIZ_SIZE}`;
+        setVisible(resultSection);
+        return;
+      }
+      renderQuestion();
+    }
+
+    function pronounceCurrent() {
+      const item = quizWords[currentIndex];
+      if (!item) return;
+      const utter = new SpeechSynthesisUtterance(item.nemet);
+      utter.lang = "de-DE";
+      utter.rate = 0.95;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }
+
+    startBtn.addEventListener("click", startQuiz);
+    checkBtn.addEventListener("click", checkAnswer);
+    nextBtn.addEventListener("click", nextQuestion);
+    pronounceBtn.addEventListener("click", pronounceCurrent);
+    restartBtn.addEventListener("click", () => setVisible(setupSection));
+    answerInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        if (!checkedCurrent) checkAnswer();
+        else nextQuestion();
+      }
+    });
+  </script>
+</body>
+</html>
